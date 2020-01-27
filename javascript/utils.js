@@ -49,6 +49,7 @@ $("button").click(async function() {
   $("button").prop("disabled", true);
   $("table").show();
   $("#jump").show();
+  $("#result").append("<p>" + navigator.userAgent + "</p>");
 
   //if there is device enumeration
   let devices = await getDevices();
@@ -57,11 +58,7 @@ $("button").click(async function() {
       const resolutions = await toResolutions(tests[r], devices[i]);
       devices[i].resolutions = resolutions;
       $("#result").append(
-        "<pre>" +
-          devices[i].label +
-          "\n " +
-          JSON.stringify(resolutions) +
-          "</pre>"
+        "<pre>" + "\n " + JSON.stringify(resolutions) + "</pre>"
       );
     }
   }
