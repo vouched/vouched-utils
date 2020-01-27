@@ -15,11 +15,26 @@ async function getDevices() {
   if (!navigator.getUserMedia) {
     return null;
   }
-  let devices = await navigator.mediaDevices.enumerateDevices();
-  devices = devices.filter(function(deviceInfo) {
-    return deviceInfo.kind === "videoinput";
-  });
-  return devices;
+  // need permission first
+  try {
+    await navigator.mediaDevices
+      .getUserMedia({
+        video: true,
+        audio: false
+      })
+      .then(async function(stream) {
+        devices = await navigator.mediaDevices.enumerateDevices();
+        devices = devices.filter(function(deviceInfo) {
+          return deviceInfo.kind === "videoinput";
+        });
+        stopStream(stream);
+      });
+
+    return devices;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
 }
 
 function errorCallback(error) {
@@ -41,17 +56,26 @@ $("button").click(async function() {
     for (let i = 0; i < devices.length; i++) {
       const resolutions = await toResolutions(tests[r], devices[i]);
       devices[i].resolutions = resolutions;
+      $("#result").append(
+        "<pre>" +
+          devices[i].label +
+          "\n " +
+          JSON.stringify(resolutions) +
+          "</pre>"
+      );
     }
   }
-  console.log(devices);
 });
 
-function killStreams() {
-  streams.forEach(stream => {
-    stream.getTracks().forEach(track => {
+function stopStream(stream) {
+  if (!stream) return;
+  if (stream.getTracks) {
+    stream.getTracks().map(function(track) {
       track.stop();
     });
-  });
+  } else {
+    stream.stop();
+  }
 }
 async function getMedia(deviceId, resolutions = [], idx = 0) {
   if (idx >= quickScan.length) {
@@ -68,8 +92,8 @@ async function getMedia(deviceId, resolutions = [], idx = 0) {
 
   await navigator.mediaDevices
     .getUserMedia(constraints)
-    // .then(gotStream)
-    .then(() => {
+    .then(stream => {
+      stopStream(stream);
       resolutions.push({
         width: candidate.width,
         height: candidate.height,
@@ -90,7 +114,6 @@ async function getMedia(deviceId, resolutions = [], idx = 0) {
 async function toResolutions(candidate, device) {
   const deviceId = device.deviceId ? { exact: device.deviceId } : undefined;
   const resolutions = await getMedia(deviceId);
-  killStreams();
   return resolutions;
 }
 
